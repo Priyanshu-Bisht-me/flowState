@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlowState - Your Personal Productivity Sanctuary</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Background Particles -->
+    <div class="particles-container">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <!-- Morphing Background Blobs -->
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="logo">
+                <div class="logo-icon">🌸</div>
+                <span>FlowState</span>
+            </div>
+        </div>
+        <div class="nav-menu">
+            <button class="nav-btn active" data-section="dashboard">Dashboard</button>
+            <button class="nav-btn" data-section="mood">Mood Journal</button>
+            <button class="nav-btn" data-section="timer">Focus Timer</button>
+            <button class="nav-btn" data-section="tasks">Tasks</button>
+            <button class="nav-btn" data-section="habits">Habits</button>
+            <button class="nav-btn" data-section="analytics">Analytics</button>
+        </div>
+        <div class="nav-controls">
+            <button class="theme-toggle" id="themeToggle">🌙</button>
+            <button class="settings-btn">⚙️</button>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="main-container">
+        <!-- Hero Section -->
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1 class="hero-title">Welcome to FlowState</h1>
+                <p class="hero-subtitle">Your Personal Productivity Sanctuary</p>
+                <div class="current-time" id="currentTime"></div>
+                <div class="current-date" id="currentDate"></div>
+            </div>
+            <div class="hero-mascot">
+                <div class="mascot-container">
+                    <div class="mascot">✨</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section class="section dashboard-section active" id="dashboard">
+            <div class="dashboard-grid">
+                <!-- Quick Stats Card -->
+                <div class="card stats-card">
+                    <h3>Today's Progress</h3>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-icon">🍅</div>
+                            <div class="stat-value" id="todayPomodoros">0</div>
+                            <div class="stat-label">Pomodoros</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-value" id="todayTasks">0</div>
+                            <div class="stat-label">Tasks Done</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-icon">🔥</div>
+                            <div class="stat-value" id="currentStreak">0</div>
+                            <div class="stat-label">Day Streak</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Mood Check -->
+                <div class="card mood-quick-card">
+                    <h3>How are you feeling?</h3>
+                    <div class="quick-mood-selector">
+                        <button class="mood-btn" data-mood="happy">😊</button>
+                        <button class="mood-btn" data-mood="calm">😌</button>
+                        <button class="mood-btn" data-mood="neutral">😐</button>
+                        <button class="mood-btn" data-mood="tired">😴</button>
+                        <button class="mood-btn" data-mood="stressed">😰</button>
+                    </div>
+                    <button class="btn-primary" onclick="showSection('mood')">Open Mood Journal</button>
+                </div>
+
+                <!-- Quick Timer -->
+                <div class="card timer-quick-card">
+                    <h3>Quick Focus</h3>
+                    <div class="quick-timer-display">
+                        <div class="timer-circle">
+                            <div class="timer-text" id="quickTimerDisplay">25:00</div>
+                        </div>
+                    </div>
+                    <div class="timer-controls">
+                        <button class="btn-secondary" id="quickStartBtn">Start</button>
+                        <button class="btn-secondary" onclick="showSection('timer')">Full Timer</button>
+                    </div>
+                </div>
+
+                <!-- Recent Tasks -->
+                <div class="card tasks-preview-card">
+                    <h3>Today's Tasks</h3>
+                    <div class="tasks-preview" id="tasksPreview">
+                        <div class="empty-state">No tasks yet. Add some to get started!</div>
+                    </div>
+                    <button class="btn-primary" onclick="showSection('tasks')">Manage Tasks</button>
+                </div>
+            </div>
+        </section>        <!
+-- Mood Journal Section -->
+        <section class="section mood-section" id="mood">
+            <div class="mood-container">
+                <div class="mood-header">
+                    <h2>Mood Journal</h2>
+                    <p>Track your emotional journey and discover patterns</p>
+                    <div class="mood-streak">
+                        <span class="streak-icon">🔥</span>
+                        <span id="moodStreak">0</span> day streak
+                    </div>
+                </div>
+
+                <div class="mood-grid">
+                    <!-- Today's Mood Entry -->
+                    <div class="card mood-entry-card">
+                        <h3>How are you feeling today?</h3>
+                        <div class="mood-selector">
+                            <button class="mood-option" data-mood="happy">
+                                <span class="mood-emoji">😊</span>
+                                <span class="mood-label">Happy</span>
+                            </button>
+                            <button class="mood-option" data-mood="calm">
+                                <span class="mood-emoji">😌</span>
+                                <span class="mood-label">Calm</span>
+                            </button>
+                            <button class="mood-option" data-mood="energized">
+                                <span class="mood-emoji">🔥</span>
+                                <span class="mood-label">Energized</span>
+                            </button>
+                            <button class="mood-option" data-mood="neutral">
+                                <span class="mood-emoji">😐</span>
+                                <span class="mood-label">Neutral</span>
+                            </button>
+                            <button class="mood-option" data-mood="tired">
+                                <span class="mood-emoji">😴</span>
+                                <span class="mood-label">Tired</span>
+                            </button>
+                            <button class="mood-option" data-mood="sad">
+                                <span class="mood-emoji">😔</span>
+                                <span class="mood-label">Sad</span>
+                            </button>
+                            <button class="mood-option" data-mood="stressed">
+                                <span class="mood-emoji">😰</span>
+                                <span class="mood-label">Stressed</span>
+                            </button>
+                        </div>
+
+                        <div class="mood-tags">
+                            <h4>What's influencing your mood?</h4>
+                            <div class="tag-selector">
+                                <button class="tag-btn" data-tag="work">Work</button>
+                                <button class="tag-btn" data-tag="family">Family</button>
+                                <button class="tag-btn" data-tag="health">Health</button>
+                                <button class="tag-btn" data-tag="weather">Weather</button>
+                                <button class="tag-btn" data-tag="sleep">Sleep</button>
+                                <button class="tag-btn" data-tag="exercise">Exercise</button>
+                                <button class="tag-btn" data-tag="social">Social</button>
+                                <button class="tag-btn" data-tag="achievement">Achievement</button>
+                            </div>
+                        </div>
+
+                        <div class="mood-notes">
+                            <h4>Journal Entry</h4>
+                            <textarea id="moodNotes" placeholder="What made you feel this way? What are you grateful for?"></textarea>
+                        </div>
+
+                        <button class="btn-primary" id="saveMoodBtn">Save Mood Entry</button>
+                    </div>
+
+                    <!-- Mood Calendar -->
+                    <div class="card mood-calendar-card">
+                        <h3>Mood Calendar</h3>
+                        <div class="calendar-container">
+                            <div class="calendar-header">
+                                <button class="calendar-nav" id="prevMonth">‹</button>
+                                <span class="calendar-title" id="calendarTitle"></span>
+                                <button class="calendar-nav" id="nextMonth">›</button>
+                            </div>
+                            <div class="calendar-grid" id="moodCalendar"></div>
+                        </div>
+                        <div class="mood-legend">
+                            <div class="legend-item"><span class="legend-color happy"></span> Happy</div>
+                            <div class="legend-item"><span class="legend-color calm"></span> Calm</div>
+                            <div class="legend-item"><span class="legend-color energized"></span> Energized</div>
+                            <div class="legend-item"><span class="legend-color neutral"></span> Neutral</div>
+                            <div class="legend-item"><span class="legend-color tired"></span> Tired</div>
+                            <div class="legend-item"><span class="legend-color sad"></span> Sad</div>
+                            <div class="legend-item"><span class="legend-color stressed"></span> Stressed</div>
+                        </div>
+                    </div>
+
+                    <!-- Mood Analytics -->
+                    <div class="card mood-analytics-card">
+                        <h3>Mood Insights</h3>
+                        <div class="analytics-grid">
+                            <div class="analytic-item">
+                                <div class="analytic-label">Most Common Mood</div>
+                                <div class="analytic-value" id="commonMood">-</div>
+                            </div>
+                            <div class="analytic-item">
+                                <div class="analytic-label">Best Day of Week</div>
+                                <div class="analytic-value" id="bestDay">-</div>
+                            </div>
+                            <div class="analytic-item">
+                                <div class="analytic-label">Entries This Month</div>
+                                <div class="analytic-value" id="monthlyEntries">0</div>
+                            </div>
+                        </div>
+                        <button class="btn-secondary" id="exportMoodBtn">Export Journal</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Focus Timer Section -->
+        <section class="section timer-section" id="timer">
+            <div class="timer-container">
+                <div class="timer-header">
+                    <h2>Focus Timer</h2>
+                    <p>Stay focused with the Pomodoro technique</p>
+                </div>
+
+                <div class="timer-main">
+                    <div class="timer-display-container">
+                        <div class="timer-circle-large">
+                            <svg class="timer-progress" viewBox="0 0 200 200">
+                                <circle cx="100" cy="100" r="90" class="timer-track"></circle>
+                                <circle cx="100" cy="100" r="90" class="timer-fill" id="timerProgress"></circle>
+                            </svg>
+                            <div class="timer-content">
+                                <div class="timer-time" id="timerDisplay">25:00</div>
+                                <div class="timer-label" id="timerLabel">Focus Time</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="timer-controls-main">
+                        <button class="btn-large btn-primary" id="startPauseBtn">Start</button>
+                        <button class="btn-large btn-secondary" id="resetBtn">Reset</button>
+                        <button class="btn-large btn-secondary" id="skipBtn">Skip</button>
+                    </div>
+
+                    <div class="timer-settings">
+                        <div class="setting-group">
+                            <label>Focus Time (minutes)</label>
+                            <input type="number" id="focusTime" value="25" min="1" max="60">
+                        </div>
+                        <div class="setting-group">
+                            <label>Short Break (minutes)</label>
+                            <input type="number" id="shortBreak" value="5" min="1" max="30">
+                        </div>
+                        <div class="setting-group">
+                            <label>Long Break (minutes)</label>
+                            <input type="number" id="longBreak" value="15" min="1" max="60">
+                        </div>
+                    </div>
+
+                    <div class="pomodoro-counter">
+                        <h4>Today's Pomodoros</h4>
+                        <div class="pomodoro-dots" id="pomodoroCounter"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tasks Section -->
+        <section class="section tasks-section" id="tasks">
+            <div class="tasks-container">
+                <div class="tasks-header">
+                    <h2>Task Manager</h2>
+                    <button class="btn-primary" id="addTaskBtn">+ Add Task</button>
+                </div>
+
+                <div class="task-input-container" id="taskInputContainer" style="display: none;">
+                    <div class="card task-input-card">
+                        <input type="text" id="taskInput" placeholder="What needs to be done?">
+                        <select id="taskCategory">
+                            <option value="work">Work</option>
+                            <option value="personal">Personal</option>
+                            <option value="health">Health</option>
+                            <option value="learning">Learning</option>
+                        </select>
+                        <div class="task-input-actions">
+                            <button class="btn-primary" id="saveTaskBtn">Save</button>
+                            <button class="btn-secondary" id="cancelTaskBtn">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tasks-grid">
+                    <div class="task-column">
+                        <h3>Today</h3>
+                        <div class="task-list" id="todayTasks"></div>
+                    </div>
+                    <div class="task-column">
+                        <h3>This Week</h3>
+                        <div class="task-list" id="weekTasks"></div>
+                    </div>
+                    <div class="task-column">
+                        <h3>Completed</h3>
+                        <div class="task-list" id="completedTasks"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Habits Section -->
+        <section class="section habits-section" id="habits">
+            <div class="habits-container">
+                <div class="habits-header">
+                    <h2>Habit Tracker</h2>
+                    <button class="btn-primary" id="addHabitBtn">+ Add Habit</button>
+                </div>
+
+                <div class="habits-grid" id="habitsGrid">
+                    <!-- Habits will be dynamically added here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Analytics Section -->
+        <section class="section analytics-section" id="analytics">
+            <div class="analytics-container">
+                <div class="analytics-header">
+                    <h2>Analytics & Insights</h2>
+                    <p>Track your productivity patterns and growth</p>
+                </div>
+
+                <div class="analytics-grid">
+                    <div class="card productivity-chart-card">
+                        <h3>Weekly Productivity</h3>
+                        <div class="chart-container" id="productivityChart"></div>
+                    </div>
+
+                    <div class="card time-breakdown-card">
+                        <h3>Time Breakdown</h3>
+                        <div class="time-breakdown" id="timeBreakdown"></div>
+                    </div>
+
+                    <div class="card achievements-card">
+                        <h3>Achievements</h3>
+                        <div class="achievements-grid" id="achievementsGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Focus Mode Overlay -->
+    <div class="focus-overlay" id="focusOverlay"></div>
+
+    <!-- Notification Toast -->
+    <div class="toast" id="toast">
+        <div class="toast-content">
+            <span class="toast-icon">✨</span>
+            <span class="toast-message"></span>
+        </div>
+    </div>
+
+    <!-- Confetti Container -->
+    <div class="confetti-container" id="confettiContainer"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
