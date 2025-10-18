@@ -1010,4 +1010,437 @@ function showSection(sectionName) {
     if (window.flowState) {
         window.flowState.showSection(sectionName);
     }
+} 
+   // Habit Management
+    addHabit() {
+        const habitName = prompt('Enter habit name:');
+        if (!habitName) return;
+        
+        const habit = {
+            id: Date.now(),
+            name: habitName,
+            createdAt: new Date().toISOString(),
+            completions: {}, // date -> boolean
+            streak: 0
+        };
+        
+        this.habits.push(habit);
+        this.saveData();
+        this.renderHabits();
+        this.showToast(`Habit "${habitName}" added! 🎯`, 'success');
+    }
+
+    renderHabits() {
+        const container = document.getElementById('habitsGrid');
+        if (!container) return;
+        
+        container.innerHTML = '';
+        
+        if (this.habits.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <h3>No habits yet!</h3>
+                    <p>Start building positive habits today</p>
+                    <button class="btn-primary" onclick="flowState.addHabit()">Add Your First Habit</button>
+                </div>
+            `;
+            return;
+        }
+        
+        this.habits.forEach(habit => {
+            const habitCard = document.createElement('div');
+            habitCard.className = 'card habit-card';
+            
+            const streak = this.calculateHabitStreak(habit);
+            const todayKey = this.getDateKey(new Date());
+            const isCompletedToday = habit.completions[todayKey] || false;
+            
+            habitCard.innerHTML = `
+                <div class="habit-header">
+                    <div class="habit-name">${habit.name}</div>
+                    <div class="habit-streak">🔥 ${streak}</div>
+                </div>
+                <div class="habit-progress">
+                    <div class="habit-progress-bar">
+                        <div class="habit-progress-fill" style="width: ${this.getWeeklyProgress(habit)}%"></div>
+                    </div>
+                </div>
+                <div class="habit-days">
+                    ${this.renderHabitDays(habit)}
+                </div>
+                <div class="habit-actions" style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                    <button class="btn-${isCompletedToday ? 'secondary' : 'primary'}" 
+                            onclick="flowState.toggleHabitToday(${habit.id})">
+                        ${isCompletedToday ? '✅ Done Today' : '⭕ Mark Complete'}
+                    </button>
+                    <button class="btn-secondary" onclick="flowState.deleteHabit(${habit.id})" 
+                            style="background: #ff4757; color: white;">🗑️</button>
+                </div>
+            `;
+            
+            container.appendChild(habitCard);
+        });
+    }
+
+    renderHabitDays(habit) {
+        const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+        const today = new Date();
+        let html = '';
+        
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateKey = this.getDateKey(date);
+            const isCompleted = habit.completions[dateKey] || false;
+            const isToday = i === 0;
+            
+            html += `
+                <div class="habit-day ${isCompleted ? 'completed' : ''} ${isToday ? 'today' : ''}"
+                     onclick="flowState.toggleHabitDay(${habit.id}, '${dateKey}')">
+                    ${days[date.getDay()]}
+                </div>
+            `;
+        }
+        
+        return html;
+    }
+
+    calculateHabitStreak(habit) {
+        let streak = 0;
+        const today = new Date();
+        
+        for (let i = 0; i < 365; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateKey = this.getDateKey(date);
+            
+            if (habit.completions[dateKey]) {
+                streak++;
+            } else {
+                break;
+            }
+        }
+        
+        return streak;
+    }
+
+    getWeeklyProgress(habit) {
+        const today = new Date();
+        let completed = 0;
+        
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateKey = this.getDateKey(date);
+            
+            if (habit.completions[dateKey]) {
+                completed++;
+            }
+        }
+        
+        return (completed / 7) * 100;
+    }
+
+    toggleHabitToday(habitId) {
+        const todayKey = this.getDateKey(new Date());
+        this.toggleHabitDay(habitId, todayKey);
+    }
+
+    toggleHabitDay(habitId, dateKey) {
+        const habit = this.habits.find(h => h.id === habitId);
+        if (!habit) return;
+        
+        habit.completions[dateKey] = !habit.completions[dateKey];
+        
+        if (habit.completions[dateKey]) {
+            this.showToast(`Great job! Habit completed! 🎉`, 'success');
+            this.createConfetti();
+        }
+        
+        this.saveData();
+        this.renderHabits();
+        this.renderDashboard();
+    }
+
+    deleteHabit(habitId) {
+        if (!confirm('Are you sure you want to delete this habit?')) return;
+        
+        this.habits = this.habits.filter(h => h.id !== habitId);
+        this.saveData();
+        this.renderHabits();
+        this.showToast('Habit deleted', 'success');
+    }
+
+    // Analytics and Insights
+    renderAnalytics() {
+        this.renderProductivityChart();
+        this.renderTimeBreakdown();
+        this.renderAchievements();
+    }
+
+    renderProductivityChart() {
+        const container = document.getElementById('productivityChart');
+        if (!container) return;
+        
+        // Simple bar chart representation
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const today = new Date();
+        let chartHTML = '<div style="display: flex; align-items: end; gap: 0.5rem; height: 150px; padding: 1rem;">';
+        
+        days.forEach((day, index) => {
+            const date = new Date(today);
+            date.setDate(date.getDate() - (6 - index));
+            const dateKey = this.getDateKey(date);
+            
+            // Calculate productivity score for the day
+            const completedTasks = this.tasks.filter(task => 
+                task.completed && task.completedAt && 
+                this.getDateKey(new Date(task.completedAt)) === dateKey
+            ).length;
+            
+            const moodEntry = this.moodData[dateKey];
+            const moodScore = moodEntry ? this.getMoodScore(moodEntry.mood) : 0;
+            
+            const totalScore = (completedTasks * 20) + moodScore;
+            const height = Math.min((totalScore / 100) * 120, 120);
+            
+            chartHTML += `
+                <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+                    <div style="width: 100%; height: ${height}px; background: var(--gradient-1); 
+                                border-radius: 4px; margin-bottom: 0.5rem; 
+                                transform: translateZ(2px); transition: all 0.3s ease;"
+                         onmouseover="this.style.transform='translateZ(8px) scale(1.05)'"
+                         onmouseout="this.style.transform='translateZ(2px) scale(1)'"></div>
+                    <span style="font-size: 0.8rem; color: var(--text-secondary);">${day}</span>
+                </div>
+            `;
+        });
+        
+        chartHTML += '</div>';
+        container.innerHTML = chartHTML;
+    }
+
+    getMoodScore(mood) {
+        const scores = {
+            happy: 40,
+            calm: 35,
+            energized: 40,
+            neutral: 20,
+            tired: 10,
+            sad: 5,
+            stressed: 0
+        };
+        return scores[mood] || 0;
+    }
+
+    renderTimeBreakdown() {
+        const container = document.getElementById('timeBreakdown');
+        if (!container) return;
+        
+        const categories = {
+            work: { icon: '💼', time: 0, color: '#B4A5F5' },
+            personal: { icon: '🏠', time: 0, color: '#FFB5E8' },
+            health: { icon: '💪', time: 0, color: '#A8E6CF' },
+            learning: { icon: '📚', time: 0, color: '#FFD93D' }
+        };
+        
+        // Calculate time spent (simplified - based on completed tasks)
+        const today = new Date().toDateString();
+        this.tasks.forEach(task => {
+            if (task.completed && new Date(task.completedAt).toDateString() === today) {
+                categories[task.category].time += 25; // Assume 25 minutes per task
+            }
+        });
+        
+        // Add pomodoro time
+        categories.work.time += this.timerState.pomodoroCount * 25;
+        
+        let html = '';
+        Object.entries(categories).forEach(([category, data]) => {
+            const hours = Math.floor(data.time / 60);
+            const minutes = data.time % 60;
+            const timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+            
+            html += `
+                <div class="time-item">
+                    <div class="time-category">
+                        <span class="time-icon">${data.icon}</span>
+                        <span>${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                    </div>
+                    <div class="time-duration">${timeString}</div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html || '<div class="empty-state">No time tracked today</div>';
+    }
+
+    renderAchievements() {
+        const container = document.getElementById('achievementsGrid');
+        if (!container) return;
+        
+        const achievements = [
+            {
+                id: 'first_mood',
+                name: 'First Mood',
+                icon: '🎭',
+                condition: () => Object.keys(this.moodData).length >= 1
+            },
+            {
+                id: 'mood_streak_7',
+                name: '7 Day Streak',
+                icon: '🔥',
+                condition: () => this.calculateMoodStreak() >= 7
+            },
+            {
+                id: 'first_pomodoro',
+                name: 'First Focus',
+                icon: '🍅',
+                condition: () => this.timerState.pomodoroCount >= 1
+            },
+            {
+                id: 'pomodoro_master',
+                name: 'Focus Master',
+                icon: '🎯',
+                condition: () => this.timerState.pomodoroCount >= 25
+            },
+            {
+                id: 'task_completer',
+                name: 'Task Master',
+                icon: '✅',
+                condition: () => this.tasks.filter(t => t.completed).length >= 10
+            },
+            {
+                id: 'habit_builder',
+                name: 'Habit Builder',
+                icon: '🏗️',
+                condition: () => this.habits.length >= 3
+            }
+        ];
+        
+        let html = '';
+        achievements.forEach(achievement => {
+            const isUnlocked = achievement.condition();
+            html += `
+                <div class="achievement-item ${isUnlocked ? 'unlocked' : ''}">
+                    <span class="achievement-icon">${achievement.icon}</span>
+                    <span class="achievement-name">${achievement.name}</span>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+
+    calculateMoodStreak() {
+        let streak = 0;
+        const today = new Date();
+        
+        for (let i = 0; i < 365; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateKey = this.getDateKey(date);
+            
+            if (this.moodData[dateKey]) {
+                streak++;
+            } else {
+                break;
+            }
+        }
+        
+        return streak;
+    }
+
+    // Enhanced initialization
+    init() {
+        this.loadData();
+        this.setupEventListeners();
+        this.updateDateTime();
+        this.setupMouseTracking();
+        this.setupKeyboardShortcuts();
+        this.renderDashboard();
+        this.renderMoodCalendar();
+        this.updateMoodAnalytics();
+        this.setupTimerGradient();
+        this.renderHabits();
+        this.renderAnalytics();
+        
+        // Setup habit tracking button
+        const addHabitBtn = document.getElementById('addHabitBtn');
+        if (addHabitBtn) {
+            addHabitBtn.addEventListener('click', () => this.addHabit());
+        }
+        
+        // Start real-time updates
+        setInterval(() => this.updateDateTime(), 1000);
+        
+        // Show entrance animation
+        this.showEntranceAnimation();
+        
+        // Update analytics when switching to analytics section
+        const originalShowSection = this.showSection;
+        this.showSection = function(sectionName) {
+            originalShowSection.call(this, sectionName);
+            if (sectionName === 'analytics') {
+                setTimeout(() => this.renderAnalytics(), 200);
+            }
+            if (sectionName === 'habits') {
+                setTimeout(() => this.renderHabits(), 200);
+            }
+        };
+    }
 }
+
+// Additional utility functions for better UX
+function createRippleEffect(element, event) {
+    const ripple = document.createElement('span');
+    const rect = element.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    const x = event.clientX - rect.left - size / 2;
+    const y = event.clientY - rect.top - size / 2;
+    
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = x + 'px';
+    ripple.style.top = y + 'px';
+    ripple.classList.add('ripple');
+    
+    element.appendChild(ripple);
+    
+    setTimeout(() => {
+        ripple.remove();
+    }, 600);
+}
+
+// Add ripple effect to all buttons
+document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('click', (e) => {
+        if (e.target.matches('button, .btn-primary, .btn-secondary')) {
+            createRippleEffect(e.target, e);
+        }
+    });
+});
+
+// Enhanced keyboard navigation
+document.addEventListener('keydown', (e) => {
+    // ESC to close modals or inputs
+    if (e.key === 'Escape') {
+        const taskInput = document.getElementById('taskInputContainer');
+        if (taskInput && taskInput.style.display !== 'none') {
+            window.flowState.hideTaskInput();
+        }
+    }
+    
+    // Arrow keys for navigation
+    if (e.altKey) {
+        switch (e.key) {
+            case 'ArrowLeft':
+                e.preventDefault();
+                // Navigate to previous section
+                break;
+            case 'ArrowRight':
+                e.preventDefault();
+                // Navigate to next section
+                break;
+        }
+    }
+});

@@ -1961,4 +1961,398 @@ k Management Styles */
         box-shadow: none;
         border: 1px solid #ccc;
     }
+}/* R
+ipple Effect */
+.ripple {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    transform: scale(0);
+    animation: ripple-animation 0.6s linear;
+    pointer-events: none;
+}
+
+@keyframes ripple-animation {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* Enhanced Button Styles */
+button, .btn-primary, .btn-secondary {
+    position: relative;
+    overflow: hidden;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s ease-in-out infinite;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Enhanced Mood Calendar */
+.calendar-day {
+    position: relative;
+    overflow: hidden;
+}
+
+.calendar-day::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+}
+
+.calendar-day:hover::before {
+    transform: translateX(100%);
+}
+
+/* Enhanced Task Items */
+.task-item {
+    position: relative;
+    overflow: hidden;
+}
+
+.task-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(180, 165, 245, 0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.task-item:hover::before {
+    left: 100%;
+}
+
+/* Floating Action Button */
+.fab {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--gradient-1);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: 0 8px 25px var(--shadow-color);
+    z-index: 1000;
+    /* 3D FAB effects */
+    transform: translateZ(20px);
+    transition: all 0.3s var(--bounce-easing);
+}
+
+.fab:hover {
+    transform: translateZ(30px) scale(1.1) rotateZ(90deg);
+    box-shadow: 0 15px 40px var(--shadow-color);
+}
+
+/* Enhanced Animations */
+@keyframes slideInFromRight {
+    0% {
+        transform: translateX(100%) translateZ(0);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0) translateZ(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromLeft {
+    0% {
+        transform: translateX(-100%) translateZ(0);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0) translateZ(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInFromBottom {
+    0% {
+        transform: translateY(100%) translateZ(0);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0) translateZ(0);
+        opacity: 1;
+    }
+}
+
+/* Section Transition Animations */
+.section.slide-in-right {
+    animation: slideInFromRight 0.6s var(--smooth-easing);
+}
+
+.section.slide-in-left {
+    animation: slideInFromLeft 0.6s var(--smooth-easing);
+}
+
+.section.slide-in-bottom {
+    animation: slideInFromBottom 0.6s var(--smooth-easing);
+}
+
+/* Enhanced Particle Effects */
+.particle-sparkle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: radial-gradient(circle, #FFD93D 0%, transparent 70%);
+    border-radius: 50%;
+    animation: sparkle 3s infinite ease-in-out;
+}
+
+@keyframes sparkle {
+    0%, 100% {
+        opacity: 0;
+        transform: scale(0) translateZ(0);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1) translateZ(10px);
+    }
+}
+
+/* Enhanced Glassmorphism */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+/* Mood Visualization Enhancements */
+.mood-visualization {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+
+.mood-viz-item {
+    text-align: center;
+    padding: 0.75rem;
+    background: var(--card-background);
+    border-radius: 12px;
+    /* 3D mood viz */
+    transform: translateZ(2px);
+    transition: all 0.3s var(--smooth-easing);
+}
+
+.mood-viz-item:hover {
+    transform: translateZ(8px) scale(1.05);
+}
+
+.mood-viz-emoji {
+    font-size: 1.5rem;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.mood-viz-count {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+/* Enhanced Timer Styles */
+.timer-glow {
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    right: -20px;
+    bottom: -20px;
+    background: radial-gradient(circle, rgba(180, 165, 245, 0.3) 0%, transparent 70%);
+    border-radius: 50%;
+    opacity: 0;
+    animation: timer-glow-pulse 2s infinite ease-in-out;
+}
+
+@keyframes timer-glow-pulse {
+    0%, 100% { opacity: 0; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+}
+
+.timer-circle-large.active .timer-glow {
+    opacity: 1;
+}
+
+/* Enhanced Habit Tracking */
+.habit-completion-animation {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    opacity: 0;
+    animation: completion-pop 0.8s var(--bounce-easing);
+}
+
+@keyframes completion-pop {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0) rotateZ(0deg);
+    }
+    50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.2) rotateZ(180deg);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(1) rotateZ(360deg);
+    }
+}
+
+/* Enhanced Analytics */
+.analytics-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.analytics-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    animation: analytics-shine 3s infinite;
+}
+
+@keyframes analytics-shine {
+    0% { left: -100%; }
+    50% { left: 100%; }
+    100% { left: 100%; }
+}
+
+/* Enhanced Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .particle,
+    .blob,
+    .timer-glow,
+    .analytics-card::after {
+        animation: none !important;
+    }
+    
+    .card:hover {
+        transform: none !important;
+    }
+}
+
+/* Focus Indicators */
+.focus-ring {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+    border-radius: inherit;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+    outline: 3px solid var(--primary-color);
+    outline-offset: 2px;
+}
+
+/* Enhanced Dark Mode */
+[data-theme="dark"] .glass-panel {
+    background: rgba(30, 30, 50, 0.8);
+    border: 1px solid rgba(139, 126, 216, 0.3);
+}
+
+[data-theme="dark"] .particle {
+    background: var(--secondary-color);
+}
+
+[data-theme="dark"] .timer-glow {
+    background: radial-gradient(circle, rgba(139, 126, 216, 0.4) 0%, transparent 70%);
+}
+
+/* Performance Optimizations */
+.gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform;
+}
+
+/* Smooth scrolling for sections */
+.section {
+    scroll-behavior: smooth;
+}
+
+/* Enhanced Mobile Experience */
+@media (max-width: 768px) {
+    .fab {
+        bottom: 1rem;
+        right: 1rem;
+        width: 50px;
+        height: 50px;
+        font-size: 1.2rem;
+    }
+    
+    .particle {
+        display: none; /* Reduce particles on mobile for performance */
+    }
+    
+    .blob {
+        opacity: 0.05; /* Reduce blob opacity on mobile */
+    }
+}
+
+/* Touch-friendly interactions */
+@media (hover: none) and (pointer: coarse) {
+    .card:hover {
+        transform: none;
+    }
+    
+    .mood-btn:hover,
+    .nav-btn:hover {
+        transform: none;
+    }
+    
+    /* Increase touch targets */
+    .mood-btn,
+    .habit-day,
+    .calendar-day {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* Print optimizations */
+@media print {
+    .particle,
+    .blob,
+    .fab,
+    .timer-glow {
+        display: none !important;
+    }
+    
+    .card {
+        transform: none !important;
+        box-shadow: none !important;
+        border: 1px solid #ccc !important;
+    }
 }
