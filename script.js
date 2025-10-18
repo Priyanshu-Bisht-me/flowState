@@ -1010,9 +1010,10 @@ function showSection(sectionName) {
     if (window.flowState) {
         window.flowState.showSection(sectionName);
     }
-} 
-   // Habit Management
-    addHabit() {
+}
+
+// Extend FlowState class with additional methods
+FlowState.prototype.addHabit = function() {
         const habitName = prompt('Enter habit name:');
         if (!habitName) return;
         
@@ -1028,9 +1029,9 @@ function showSection(sectionName) {
         this.saveData();
         this.renderHabits();
         this.showToast(`Habit "${habitName}" added! 🎯`, 'success');
-    }
+    };
 
-    renderHabits() {
+FlowState.prototype.renderHabits = function() {
         const container = document.getElementById('habitsGrid');
         if (!container) return;
         
@@ -1080,9 +1081,9 @@ function showSection(sectionName) {
             
             container.appendChild(habitCard);
         });
-    }
+    };
 
-    renderHabitDays(habit) {
+FlowState.prototype.renderHabitDays = function(habit) {
         const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
         const today = new Date();
         let html = '';
@@ -1103,9 +1104,9 @@ function showSection(sectionName) {
         }
         
         return html;
-    }
+    };
 
-    calculateHabitStreak(habit) {
+FlowState.prototype.calculateHabitStreak = function(habit) {
         let streak = 0;
         const today = new Date();
         
@@ -1122,9 +1123,9 @@ function showSection(sectionName) {
         }
         
         return streak;
-    }
+    };
 
-    getWeeklyProgress(habit) {
+FlowState.prototype.getWeeklyProgress = function(habit) {
         const today = new Date();
         let completed = 0;
         
@@ -1139,14 +1140,14 @@ function showSection(sectionName) {
         }
         
         return (completed / 7) * 100;
-    }
+    };
 
-    toggleHabitToday(habitId) {
+FlowState.prototype.toggleHabitToday = function(habitId) {
         const todayKey = this.getDateKey(new Date());
         this.toggleHabitDay(habitId, todayKey);
-    }
+    };
 
-    toggleHabitDay(habitId, dateKey) {
+FlowState.prototype.toggleHabitDay = function(habitId, dateKey) {
         const habit = this.habits.find(h => h.id === habitId);
         if (!habit) return;
         
@@ -1160,25 +1161,25 @@ function showSection(sectionName) {
         this.saveData();
         this.renderHabits();
         this.renderDashboard();
-    }
+    };
 
-    deleteHabit(habitId) {
+FlowState.prototype.deleteHabit = function(habitId) {
         if (!confirm('Are you sure you want to delete this habit?')) return;
         
         this.habits = this.habits.filter(h => h.id !== habitId);
         this.saveData();
         this.renderHabits();
         this.showToast('Habit deleted', 'success');
-    }
+    };
 
     // Analytics and Insights
-    renderAnalytics() {
+FlowState.prototype.renderAnalytics = function() {
         this.renderProductivityChart();
         this.renderTimeBreakdown();
         this.renderAchievements();
-    }
+    };
 
-    renderProductivityChart() {
+FlowState.prototype.renderProductivityChart = function() {
         const container = document.getElementById('productivityChart');
         if (!container) return;
         
@@ -1218,9 +1219,9 @@ function showSection(sectionName) {
         
         chartHTML += '</div>';
         container.innerHTML = chartHTML;
-    }
+    };
 
-    getMoodScore(mood) {
+FlowState.prototype.getMoodScore = function(mood) {
         const scores = {
             happy: 40,
             calm: 35,
@@ -1231,9 +1232,9 @@ function showSection(sectionName) {
             stressed: 0
         };
         return scores[mood] || 0;
-    }
+    };
 
-    renderTimeBreakdown() {
+FlowState.prototype.renderTimeBreakdown = function() {
         const container = document.getElementById('timeBreakdown');
         if (!container) return;
         
@@ -1273,9 +1274,9 @@ function showSection(sectionName) {
         });
         
         container.innerHTML = html || '<div class="empty-state">No time tracked today</div>';
-    }
+    };
 
-    renderAchievements() {
+FlowState.prototype.renderAchievements = function() {
         const container = document.getElementById('achievementsGrid');
         if (!container) return;
         
@@ -1330,9 +1331,9 @@ function showSection(sectionName) {
         });
         
         container.innerHTML = html;
-    }
+    };
 
-    calculateMoodStreak() {
+FlowState.prototype.calculateMoodStreak = function() {
         let streak = 0;
         const today = new Date();
         
@@ -1349,10 +1350,10 @@ function showSection(sectionName) {
         }
         
         return streak;
-    }
+    };
 
-    // Enhanced initialization
-    init() {
+    // Enhanced initialization - Override the original init method
+FlowState.prototype.initEnhanced = function() {
         this.loadData();
         this.setupEventListeners();
         this.updateDateTime();
@@ -1378,18 +1379,21 @@ function showSection(sectionName) {
         this.showEntranceAnimation();
         
         // Update analytics when switching to analytics section
-        const originalShowSection = this.showSection;
+        const originalShowSection = this.showSection.bind(this);
+        const self = this;
         this.showSection = function(sectionName) {
-            originalShowSection.call(this, sectionName);
+            originalShowSection(sectionName);
             if (sectionName === 'analytics') {
-                setTimeout(() => this.renderAnalytics(), 200);
+                setTimeout(() => self.renderAnalytics(), 200);
             }
             if (sectionName === 'habits') {
-                setTimeout(() => this.renderHabits(), 200);
+                setTimeout(() => self.renderHabits(), 200);
             }
         };
-    }
-}
+    };
+
+// Call the enhanced initialization
+FlowState.prototype.init = FlowState.prototype.initEnhanced;
 
 // Additional utility functions for better UX
 function createRippleEffect(element, event) {
@@ -1443,4 +1447,15 @@ document.addEventListener('keydown', (e) => {
                 break;
         }
     }
-});
+});// 
+Test function to verify FlowState is working
+function testFlowState() {
+    console.log('FlowState class:', FlowState);
+    console.log('FlowState prototype methods:', Object.getOwnPropertyNames(FlowState.prototype));
+    return true;
+}
+
+// Export for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { FlowState, testFlowState };
+}
