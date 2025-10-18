@@ -1,10 +1,13 @@
-// FlowState - Anime-Inspired Productivity Dashboard
-// Main JavaScript functionality with 3D animations and mood tracking
+// FlowState - Personal Productivity Dashboard
+// Main JavaScript Application
 
-class FlowState {
+class FlowStateApp {
     constructor() {
+        // Application state
         this.currentSection = 'dashboard';
-        this.timer = null;
+        this.currentTheme = 'light';
+        
+        // Timer state
         this.timerState = {
             isRunning: false,
             timeLeft: 25 * 60, // 25 minutes in seconds
@@ -12,24 +15,37 @@ class FlowState {
             pomodoroCount: 0,
             focusTime: 25,
             shortBreak: 5,
-            longBreak: 15
+            longBreak: 15,
+            timerInterval: null
         };
-        this.tasks = [];
-        this.habits = [];
-        this.moodData = {};
+        
+        // Data storage
+        this.userData = {
+            tasks: [],
+            habits: [],
+            moodEntries: {},
+            achievements: [],
+            settings: {}
+        };
+        
+        // Current mood entry
         this.currentMoodEntry = {
             mood: null,
             tags: [],
             notes: '',
             timestamp: null
         };
+        
+        // Calendar state
         this.calendarDate = new Date();
         
-        this.init();
+        // Initialize application
+        this.initializeApp();
     }
 
-    init() {
-        this.loadData();
+    // Application Initialization
+    initializeApp() {
+        this.loadUserData();
         this.setupEventListeners();
         this.updateDateTime();
         this.setupMouseTracking();
@@ -37,36 +53,55 @@ class FlowState {
         this.renderDashboard();
         this.renderMoodCalendar();
         this.updateMoodAnalytics();
-        this.setupTimerGradient();
+        this.renderHabits();
+        this.renderTasks();
+        this.updateTimerDisplay();
         
         // Start real-time updates
         setInterval(() => this.updateDateTime(), 1000);
         
         // Show entrance animation
         this.showEntranceAnimation();
+        
+        console.log('FlowState initialized successfully! ✨');
     }
 
     // Data Management
-    loadData() {
+    loadUserData() {
         try {
-            this.tasks = JSON.parse(localStorage.getItem('flowstate_tasks')) || [];
-            this.habits = JSON.parse(localStorage.getItem('flowstate_habits')) || [];
-            this.moodData = JSON.parse(localStorage.getItem('flowstate_mood')) || {};
-            this.timerState = { ...this.timerState, ...JSON.parse(localStorage.getItem('flowstate_timer')) || {} };
+            const savedTasks = localStorage.getItem('flowstate_tasks');
+            const savedHabits = localStorage.getItem('flowstate_habits');
+            const savedMoodEntries = localStorage.getItem('flowstate_mood_entries');
+            const savedTimerState = localStorage.getItem('flowstate_timer_state');
+            const savedTheme = localStorage.getItem('flowstate_theme');
+            
+            if (savedTasks) this.userData.tasks = JSON.parse(savedTasks);
+            if (savedHabits) this.userData.habits = JSON.parse(savedHabits);
+            if (savedMoodEntries) this.userData.moodEntries = JSON.parse(savedMoodEntries);
+            if (savedTimerState) {
+                const timerData = JSON.parse(savedTimerState);
+                this.timerState = { ...this.timerState, ...timerData };
+            }
+            if (savedTheme) {
+                this.currentTheme = savedTheme;
+                document.documentElement.setAttribute('data-theme', savedTheme);
+                document.getElementById('themeToggleButton').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+            }
         } catch (error) {
-            console.error('Error loading data:', error);
+            console.error('Error loading user data:', error);
             this.showToast('Error loading saved data', 'error');
         }
     }
 
-    saveData() {
+    saveUserData() {
         try {
-            localStorage.setItem('flowstate_tasks', JSON.stringify(this.tasks));
-            localStorage.setItem('flowstate_habits', JSON.stringify(this.habits));
-            localStorage.setItem('flowstate_mood', JSON.stringify(this.moodData));
-            localStorage.setItem('flowstate_timer', JSON.stringify(this.timerState));
+            localStorage.setItem('flowstate_tasks', JSON.stringify(this.userData.tasks));
+            localStorage.setItem('flowstate_habits', JSON.stringify(this.userData.habits));
+            localStorage.setItem('flowstate_mood_entries', JSON.stringify(this.userData.moodEntries));
+            localStorage.setItem('flowstate_timer_state', JSON.stringify(this.timerState));
+            localStorage.setItem('flowstate_theme', this.currentTheme);
         } catch (error) {
-            console.error('Error saving data:', error);
+            console.error('Error saving user data:', error);
             this.showToast('Error saving data', 'error');
         }
     }
@@ -74,21 +109,21 @@ class FlowState {
     // Event Listeners Setup
     setupEventListeners() {
         // Navigation
-        document.querySelectorAll('.nav-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const section = e.target.dataset.section;
-                this.showSection(section);
+        document.querySelectorAll('.nav-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const section = e.currentTarget.dataset.section;
+                this.navigateToSection(section);
             });
         });
 
         // Theme toggle
-        document.getElementById('themeToggle').addEventListener('click', () => {
+        document.getElementById('themeToggleButton').addEventListener('click', () => {
             this.toggleTheme();
         });
 
         // Quick mood selector
-        document.querySelectorAll('.quick-mood-selector .mood-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.mood-quick-button').forEach(button => {
+            button.addEventListener('click', (e) => {
                 this.quickMoodSelect(e.target.dataset.mood);
             });
         });
@@ -102,30 +137,15 @@ class FlowState {
         // Tasks
         this.setupTaskListeners();
         
-        // Calendar navigation
-        document.getElementById('prevMonth').addEventListener('click', () => {
-            this.calendarDate.setMonth(this.calendarDate.getMonth() - 1);
-            this.renderMoodCalendar();
-        });
-        
-        document.getElementById('nextMonth').addEventListener('click', () => {
-            this.calendarDate.setMonth(this.calendarDate.getMonth() + 1);
-            this.renderMoodCalendar();
-        });
-
-        // Export mood data
-        document.getElementById('exportMoodBtn').addEventListener('click', () => {
-            this.exportMoodData();
-        });
+        // Habits
+        this.setupHabitListeners();
     }
 
     setupMoodJournalListeners() {
         // Mood selection
-        document.querySelectorAll('.mood-option').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                // Remove previous selection
-                document.querySelectorAll('.mood-option').forEach(b => b.classList.remove('selected'));
-                // Add selection to clicked button
+        document.querySelectorAll('.mood-option-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                document.querySelectorAll('.mood-option-button').forEach(b => b.classList.remove('selected'));
                 e.currentTarget.classList.add('selected');
                 this.currentMoodEntry.mood = e.currentTarget.dataset.mood;
                 
@@ -136,8 +156,8 @@ class FlowState {
         });
 
         // Tag selection
-        document.querySelectorAll('.tag-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.mood-tag-button').forEach(button => {
+            button.addEventListener('click', (e) => {
                 const tag = e.target.dataset.tag;
                 const isSelected = e.target.classList.contains('selected');
                 
@@ -152,70 +172,113 @@ class FlowState {
         });
 
         // Save mood entry
-        document.getElementById('saveMoodBtn').addEventListener('click', () => {
+        document.getElementById('saveMoodEntryButton').addEventListener('click', () => {
             this.saveMoodEntry();
         });
 
         // Mood notes
-        document.getElementById('moodNotes').addEventListener('input', (e) => {
+        document.getElementById('moodJournalTextarea').addEventListener('input', (e) => {
             this.currentMoodEntry.notes = e.target.value;
+        });
+
+        // Calendar navigation
+        document.getElementById('previousMonthButton').addEventListener('click', () => {
+            this.calendarDate.setMonth(this.calendarDate.getMonth() - 1);
+            this.renderMoodCalendar();
+        });
+        
+        document.getElementById('nextMonthButton').addEventListener('click', () => {
+            this.calendarDate.setMonth(this.calendarDate.getMonth() + 1);
+            this.renderMoodCalendar();
+        });
+
+        // Export mood data
+        document.getElementById('exportMoodDataButton').addEventListener('click', () => {
+            this.exportMoodData();
         });
     }
 
     setupTimerListeners() {
-        document.getElementById('startPauseBtn').addEventListener('click', () => {
+        document.getElementById('startPauseTimerButton').addEventListener('click', () => {
             this.toggleTimer();
         });
 
-        document.getElementById('resetBtn').addEventListener('click', () => {
+        document.getElementById('resetTimerButton').addEventListener('click', () => {
             this.resetTimer();
         });
 
-        document.getElementById('skipBtn').addEventListener('click', () => {
+        document.getElementById('skipTimerButton').addEventListener('click', () => {
             this.skipTimer();
         });
 
-        document.getElementById('quickStartBtn').addEventListener('click', () => {
+        document.getElementById('quickPomodoroStartButton').addEventListener('click', () => {
             this.toggleTimer();
         });
 
         // Timer settings
-        ['focusTime', 'shortBreak', 'longBreak'].forEach(id => {
+        ['focusTimeInput', 'shortBreakInput', 'longBreakInput'].forEach(id => {
             document.getElementById(id).addEventListener('change', (e) => {
-                this.timerState[id] = parseInt(e.target.value);
-                if (id === 'focusTime' && this.timerState.currentSession === 'focus') {
+                const setting = id.replace('Input', '').replace('Time', 'Time');
+                this.timerState[setting] = parseInt(e.target.value);
+                if (setting === 'focusTime' && this.timerState.currentSession === 'focus') {
                     this.timerState.timeLeft = this.timerState.focusTime * 60;
                     this.updateTimerDisplay();
                 }
-                this.saveData();
+                this.saveUserData();
             });
         });
     }
 
     setupTaskListeners() {
-        document.getElementById('addTaskBtn').addEventListener('click', () => {
+        document.getElementById('addNewTaskButton').addEventListener('click', () => {
             this.showTaskInput();
         });
 
-        document.getElementById('saveTaskBtn').addEventListener('click', () => {
-            this.saveTask();
+        document.getElementById('saveNewTaskButton').addEventListener('click', () => {
+            this.saveNewTask();
         });
 
-        document.getElementById('cancelTaskBtn').addEventListener('click', () => {
+        document.getElementById('cancelNewTaskButton').addEventListener('click', () => {
             this.hideTaskInput();
         });
 
-        document.getElementById('taskInput').addEventListener('keypress', (e) => {
+        document.getElementById('newTaskInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                this.saveTask();
+                this.saveNewTask();
             }
         });
     }
 
-    // Mouse Tracking for 3D Effects
+    setupHabitListeners() {
+        document.getElementById('addNewHabitButton').addEventListener('click', () => {
+            this.showHabitModal();
+        });
+
+        document.getElementById('saveNewHabitButton').addEventListener('click', () => {
+            this.saveNewHabit();
+        });
+
+        document.getElementById('cancelNewHabitButton').addEventListener('click', () => {
+            this.hideHabitModal();
+        });
+
+        document.getElementById('newHabitNameInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.saveNewHabit();
+            }
+        });
+
+        // Modal overlay click to close
+        document.getElementById('habitModalOverlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) {
+                this.hideHabitModal();
+            }
+        });
+    }    //
+ Mouse Tracking for 3D Effects
     setupMouseTracking() {
         document.addEventListener('mousemove', (e) => {
-            const cards = document.querySelectorAll('.card');
+            const cards = document.querySelectorAll('.dashboard-card, .mood-card, .analytics-card');
             cards.forEach(card => {
                 const rect = card.getBoundingClientRect();
                 const x = e.clientX - rect.left;
@@ -227,7 +290,7 @@ class FlowState {
                     const rotateX = (y - centerY) / 10;
                     const rotateY = (centerX - x) / 10;
                     
-                    card.style.transform = `translateZ(${this.getCardDepth()}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+                    card.style.transform = `translateZ(20px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
                     card.classList.add('tilt');
                 } else {
                     card.style.transform = '';
@@ -235,10 +298,6 @@ class FlowState {
                 }
             });
         });
-    }
-
-    getCardDepth() {
-        return getComputedStyle(document.documentElement).getPropertyValue('--card-depth').replace('px', '');
     }
 
     // Keyboard Shortcuts
@@ -252,29 +311,29 @@ class FlowState {
                         break;
                     case 'm':
                         e.preventDefault();
-                        this.showSection('mood');
+                        this.navigateToSection('mood-journal');
                         break;
                     case 't':
                         e.preventDefault();
-                        this.showSection('timer');
+                        this.navigateToSection('pomodoro-timer');
                         break;
                 }
-            } else if (e.key === ' ' && this.currentSection === 'timer') {
+            } else if (e.key === ' ' && this.currentSection === 'pomodoro-timer') {
                 e.preventDefault();
                 this.toggleTimer();
             }
         });
     }
 
-    // Section Management
-    showSection(sectionName) {
+    // Navigation
+    navigateToSection(sectionName) {
         // Hide current section
-        document.querySelectorAll('.section').forEach(section => {
+        document.querySelectorAll('.content-section').forEach(section => {
             section.classList.remove('active');
         });
 
         // Update navigation
-        document.querySelectorAll('.nav-btn').forEach(btn => {
+        document.querySelectorAll('.nav-button').forEach(btn => {
             btn.classList.remove('active');
         });
 
@@ -289,12 +348,16 @@ class FlowState {
                 this.currentSection = sectionName;
                 
                 // Section-specific initialization
-                if (sectionName === 'mood') {
+                if (sectionName === 'mood-journal') {
                     this.initMoodSection();
-                } else if (sectionName === 'timer') {
+                } else if (sectionName === 'pomodoro-timer') {
                     this.updateTimerDisplay();
-                } else if (sectionName === 'tasks') {
+                } else if (sectionName === 'task-manager') {
                     this.renderTasks();
+                } else if (sectionName === 'habit-tracker') {
+                    this.renderHabits();
+                } else if (sectionName === 'analytics-dashboard') {
+                    this.renderAnalytics();
                 }
             }, 100);
         }
@@ -302,13 +365,11 @@ class FlowState {
 
     // Theme Management
     toggleTheme() {
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        this.currentTheme = this.currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', this.currentTheme);
+        document.getElementById('themeToggleButton').textContent = this.currentTheme === 'dark' ? '☀️' : '🌙';
         
-        document.documentElement.setAttribute('data-theme', newTheme);
-        document.getElementById('themeToggle').textContent = newTheme === 'dark' ? '☀️' : '🌙';
-        
-        localStorage.setItem('flowstate_theme', newTheme);
+        this.saveUserData();
         
         // Add theme transition animation
         document.body.style.transition = 'all 0.5s ease';
@@ -332,8 +393,11 @@ class FlowState {
             day: 'numeric' 
         };
 
-        document.getElementById('currentTime').textContent = now.toLocaleTimeString('en-US', timeOptions);
-        document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', dateOptions);
+        const timeElement = document.getElementById('currentTimeDisplay');
+        const dateElement = document.getElementById('currentDateDisplay');
+        
+        if (timeElement) timeElement.textContent = now.toLocaleTimeString('en-US', timeOptions);
+        if (dateElement) dateElement.textContent = now.toLocaleDateString('en-US', dateOptions);
     }
 
     // Mood Journal Functionality
@@ -344,28 +408,29 @@ class FlowState {
 
     loadTodaysMood() {
         const today = this.getDateKey(new Date());
-        const todaysMood = this.moodData[today];
+        const todaysMood = this.userData.moodEntries[today];
         
         if (todaysMood) {
             // Load existing mood data
             this.currentMoodEntry = { ...todaysMood };
             
             // Update UI
-            document.querySelectorAll('.mood-option').forEach(btn => {
+            document.querySelectorAll('.mood-option-button').forEach(btn => {
                 btn.classList.remove('selected');
                 if (btn.dataset.mood === todaysMood.mood) {
                     btn.classList.add('selected');
                 }
             });
             
-            document.querySelectorAll('.tag-btn').forEach(btn => {
+            document.querySelectorAll('.mood-tag-button').forEach(btn => {
                 btn.classList.remove('selected');
                 if (todaysMood.tags.includes(btn.dataset.tag)) {
                     btn.classList.add('selected');
                 }
             });
             
-            document.getElementById('moodNotes').value = todaysMood.notes || '';
+            const textarea = document.getElementById('moodJournalTextarea');
+            if (textarea) textarea.value = todaysMood.notes || '';
         } else {
             // Reset for new entry
             this.currentMoodEntry = {
@@ -385,10 +450,11 @@ class FlowState {
 
         const today = this.getDateKey(new Date());
         this.currentMoodEntry.timestamp = new Date().toISOString();
-        this.currentMoodEntry.notes = document.getElementById('moodNotes').value;
+        const textarea = document.getElementById('moodJournalTextarea');
+        if (textarea) this.currentMoodEntry.notes = textarea.value;
         
-        this.moodData[today] = { ...this.currentMoodEntry };
-        this.saveData();
+        this.userData.moodEntries[today] = { ...this.currentMoodEntry };
+        this.saveUserData();
         
         // Update UI
         this.renderMoodCalendar();
@@ -412,11 +478,11 @@ class FlowState {
             timestamp: new Date().toISOString()
         };
         
-        this.moodData[today] = quickEntry;
-        this.saveData();
+        this.userData.moodEntries[today] = quickEntry;
+        this.saveUserData();
         
         // Update UI
-        document.querySelectorAll('.quick-mood-selector .mood-btn').forEach(btn => {
+        document.querySelectorAll('.mood-quick-button').forEach(btn => {
             btn.classList.remove('selected');
         });
         event.target.classList.add('selected');
@@ -434,19 +500,25 @@ class FlowState {
             date.setDate(date.getDate() - i);
             const dateKey = this.getDateKey(date);
             
-            if (this.moodData[dateKey]) {
+            if (this.userData.moodEntries[dateKey]) {
                 streak++;
             } else {
                 break;
             }
         }
         
-        document.getElementById('moodStreak').textContent = streak;
+        const streakElement = document.getElementById('moodStreakCounter');
+        if (streakElement) streakElement.textContent = streak;
+        
+        const dashboardStreakElement = document.getElementById('moodJournalStreak');
+        if (dashboardStreakElement) dashboardStreakElement.textContent = streak;
     }
 
     renderMoodCalendar() {
-        const calendar = document.getElementById('moodCalendar');
-        const title = document.getElementById('calendarTitle');
+        const calendar = document.getElementById('moodCalendarGrid');
+        const title = document.getElementById('calendarMonthYear');
+        
+        if (!calendar || !title) return;
         
         const year = this.calendarDate.getFullYear();
         const month = this.calendarDate.getMonth();
@@ -464,10 +536,7 @@ class FlowState {
         dayHeaders.forEach(day => {
             const header = document.createElement('div');
             header.textContent = day;
-            header.style.fontWeight = '600';
-            header.style.color = 'var(--text-secondary)';
-            header.style.padding = '0.5rem';
-            header.style.textAlign = 'center';
+            header.className = 'calendar-day-header';
             calendar.appendChild(header);
         });
         
@@ -478,6 +547,7 @@ class FlowState {
         // Add empty cells for days before month starts
         for (let i = 0; i < firstDay; i++) {
             const emptyDay = document.createElement('div');
+            emptyDay.className = 'calendar-day-empty';
             calendar.appendChild(emptyDay);
         }
         
@@ -489,7 +559,7 @@ class FlowState {
             
             const date = new Date(year, month, day);
             const dateKey = this.getDateKey(date);
-            const moodEntry = this.moodData[dateKey];
+            const moodEntry = this.userData.moodEntries[dateKey];
             
             if (moodEntry) {
                 dayElement.classList.add('has-mood', `mood-${moodEntry.mood}`);
@@ -499,8 +569,7 @@ class FlowState {
             // Highlight today
             const today = new Date();
             if (date.toDateString() === today.toDateString()) {
-                dayElement.style.background = 'var(--primary-color)';
-                dayElement.style.color = 'white';
+                dayElement.classList.add('today');
             }
             
             calendar.appendChild(dayElement);
@@ -508,12 +577,13 @@ class FlowState {
     }
 
     updateMoodAnalytics() {
-        const moods = Object.values(this.moodData);
+        const moods = Object.values(this.userData.moodEntries);
         
         if (moods.length === 0) {
-            document.getElementById('commonMood').textContent = '-';
-            document.getElementById('bestDay').textContent = '-';
-            document.getElementById('monthlyEntries').textContent = '0';
+            document.getElementById('mostCommonMood').textContent = '-';
+            document.getElementById('bestDayOfWeek').textContent = '-';
+            document.getElementById('monthlyMoodEntries').textContent = '0';
+            document.getElementById('averageWeeklyMood').textContent = '-';
             return;
         }
         
@@ -527,7 +597,7 @@ class FlowState {
             moodCounts[a] > moodCounts[b] ? a : b
         );
         
-        document.getElementById('commonMood').textContent = 
+        document.getElementById('mostCommonMood').textContent = 
             `${this.getMoodEmoji(commonMood)} ${commonMood}`;
         
         // Best day of week (most positive moods)
@@ -556,7 +626,7 @@ class FlowState {
             }
         });
         
-        document.getElementById('bestDay').textContent = bestDay;
+        document.getElementById('bestDayOfWeek').textContent = bestDay;
         
         // Monthly entries
         const currentMonth = new Date().getMonth();
@@ -566,11 +636,11 @@ class FlowState {
             return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
         }).length;
         
-        document.getElementById('monthlyEntries').textContent = monthlyEntries;
+        document.getElementById('monthlyMoodEntries').textContent = monthlyEntries;
     }
 
     exportMoodData() {
-        const dataStr = JSON.stringify(this.moodData, null, 2);
+        const dataStr = JSON.stringify(this.userData.moodEntries, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         const url = URL.createObjectURL(dataBlob);
         
@@ -581,32 +651,8 @@ class FlowState {
         
         URL.revokeObjectURL(url);
         this.showToast('Mood journal exported! 📄', 'success');
-    }
-
-    // Timer Functionality
-    setupTimerGradient() {
-        // Create SVG gradient for timer
-        const svg = document.querySelector('.timer-progress');
-        if (svg) {
-            const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-            const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
-            gradient.id = 'timerGradient';
-            
-            const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-            stop1.setAttribute('offset', '0%');
-            stop1.setAttribute('stop-color', '#B4A5F5');
-            
-            const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
-            stop2.setAttribute('offset', '100%');
-            stop2.setAttribute('stop-color', '#FFB5E8');
-            
-            gradient.appendChild(stop1);
-            gradient.appendChild(stop2);
-            defs.appendChild(gradient);
-            svg.appendChild(defs);
-        }
-    }
-
+    }    //
+ Timer Functionality
     toggleTimer() {
         if (this.timerState.isRunning) {
             this.pauseTimer();
@@ -617,10 +663,10 @@ class FlowState {
 
     startTimer() {
         this.timerState.isRunning = true;
-        document.getElementById('startPauseBtn').textContent = 'Pause';
-        document.getElementById('quickStartBtn').textContent = 'Pause';
+        document.getElementById('startPauseTimerButton').textContent = 'Pause';
+        document.getElementById('quickPomodoroStartButton').textContent = 'Pause';
         
-        this.timer = setInterval(() => {
+        this.timerState.timerInterval = setInterval(() => {
             this.timerState.timeLeft--;
             this.updateTimerDisplay();
             
@@ -629,23 +675,23 @@ class FlowState {
             }
         }, 1000);
         
-        this.saveData();
+        this.saveUserData();
         this.showToast('Timer started! Focus time 🎯', 'success');
     }
 
     pauseTimer() {
         this.timerState.isRunning = false;
-        clearInterval(this.timer);
-        document.getElementById('startPauseBtn').textContent = 'Start';
-        document.getElementById('quickStartBtn').textContent = 'Start';
-        this.saveData();
+        clearInterval(this.timerState.timerInterval);
+        document.getElementById('startPauseTimerButton').textContent = 'Start';
+        document.getElementById('quickPomodoroStartButton').textContent = 'Start Focus';
+        this.saveUserData();
     }
 
     resetTimer() {
         this.pauseTimer();
         this.timerState.timeLeft = this.timerState.focusTime * 60;
         this.updateTimerDisplay();
-        this.saveData();
+        this.saveUserData();
     }
 
     skipTimer() {
@@ -678,7 +724,7 @@ class FlowState {
         
         this.updateTimerDisplay();
         this.createConfetti();
-        this.saveData();
+        this.saveUserData();
         
         // Browser notification
         if (Notification.permission === 'granted') {
@@ -694,8 +740,11 @@ class FlowState {
         const seconds = this.timerState.timeLeft % 60;
         const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
-        document.getElementById('timerDisplay').textContent = timeString;
-        document.getElementById('quickTimerDisplay').textContent = timeString;
+        const mainTimerDisplay = document.getElementById('mainTimerDisplay');
+        const quickTimerText = document.getElementById('quickTimerText');
+        
+        if (mainTimerDisplay) mainTimerDisplay.textContent = timeString;
+        if (quickTimerText) quickTimerText.textContent = timeString;
         
         // Update timer label
         const labels = {
@@ -703,7 +752,8 @@ class FlowState {
             shortBreak: 'Short Break',
             longBreak: 'Long Break'
         };
-        document.getElementById('timerLabel').textContent = labels[this.timerState.currentSession];
+        const timerLabel = document.getElementById('timerSessionLabel');
+        if (timerLabel) timerLabel.textContent = labels[this.timerState.currentSession];
         
         // Update progress circle
         const totalTime = this.getTotalTimeForSession();
@@ -711,8 +761,9 @@ class FlowState {
         const circumference = 2 * Math.PI * 90; // radius = 90
         const offset = circumference - (progress * circumference);
         
-        const progressCircle = document.getElementById('timerProgress');
+        const progressCircle = document.getElementById('timerProgressCircle');
         if (progressCircle) {
+            progressCircle.style.strokeDasharray = circumference;
             progressCircle.style.strokeDashoffset = offset;
         }
     }
@@ -727,7 +778,7 @@ class FlowState {
     }
 
     updatePomodoroCounter() {
-        const container = document.getElementById('pomodoroCounter');
+        const container = document.getElementById('pomodoroDotsContainer');
         if (!container) return;
         
         container.innerHTML = '';
@@ -740,39 +791,51 @@ class FlowState {
             }
             container.appendChild(dot);
         }
+        
+        // Update dashboard
+        const dashboardCount = document.getElementById('todayPomodoroCount');
+        if (dashboardCount) dashboardCount.textContent = this.timerState.pomodoroCount;
     }
 
     // Task Management
     showTaskInput() {
-        document.getElementById('taskInputContainer').style.display = 'block';
-        document.getElementById('taskInput').focus();
+        const taskForm = document.getElementById('taskInputForm');
+        if (taskForm) {
+            taskForm.style.display = 'block';
+            document.getElementById('newTaskInput').focus();
+        }
     }
 
     hideTaskInput() {
-        document.getElementById('taskInputContainer').style.display = 'none';
-        document.getElementById('taskInput').value = '';
+        const taskForm = document.getElementById('taskInputForm');
+        if (taskForm) {
+            taskForm.style.display = 'none';
+            document.getElementById('newTaskInput').value = '';
+        }
     }
 
-    saveTask() {
-        const taskText = document.getElementById('taskInput').value.trim();
-        const category = document.getElementById('taskCategory').value;
+    saveNewTask() {
+        const taskInput = document.getElementById('newTaskInput');
+        const categorySelect = document.getElementById('taskCategorySelect');
+        const prioritySelect = document.getElementById('taskPrioritySelect');
         
-        if (!taskText) {
+        if (!taskInput || !taskInput.value.trim()) {
             this.showToast('Please enter a task description', 'error');
             return;
         }
         
-        const task = {
+        const newTask = {
             id: Date.now(),
-            text: taskText,
-            category: category,
+            text: taskInput.value.trim(),
+            category: categorySelect.value,
+            priority: prioritySelect.value,
             completed: false,
             createdAt: new Date().toISOString(),
             dueDate: 'today' // Default to today
         };
         
-        this.tasks.push(task);
-        this.saveData();
+        this.userData.tasks.push(newTask);
+        this.saveUserData();
         this.hideTaskInput();
         this.renderTasks();
         this.renderDashboard();
@@ -781,9 +844,9 @@ class FlowState {
     }
 
     renderTasks() {
-        const todayContainer = document.getElementById('todayTasks');
-        const weekContainer = document.getElementById('weekTasks');
-        const completedContainer = document.getElementById('completedTasks');
+        const todayContainer = document.getElementById('todayTasksList');
+        const weekContainer = document.getElementById('weekTasksList');
+        const completedContainer = document.getElementById('completedTasksList');
         
         if (!todayContainer) return;
         
@@ -793,21 +856,24 @@ class FlowState {
         });
         
         // Sort tasks
-        const todayTasks = this.tasks.filter(task => !task.completed && task.dueDate === 'today');
-        const weekTasks = this.tasks.filter(task => !task.completed && task.dueDate === 'week');
-        const completedTasks = this.tasks.filter(task => task.completed);
+        const todayTasks = this.userData.tasks.filter(task => !task.completed && task.dueDate === 'today');
+        const weekTasks = this.userData.tasks.filter(task => !task.completed && task.dueDate === 'week');
+        const completedTasks = this.userData.tasks.filter(task => task.completed);
         
         // Render task lists
         this.renderTaskList(todayTasks, todayContainer);
         this.renderTaskList(weekTasks, weekContainer);
         this.renderTaskList(completedTasks, completedContainer);
+        
+        // Update dashboard preview
+        this.updateTasksPreview();
     }
 
     renderTaskList(tasks, container) {
         if (!container) return;
         
         if (tasks.length === 0) {
-            container.innerHTML = '<div class="empty-state">No tasks here yet</div>';
+            container.innerHTML = '<div class="empty-state-message">No tasks here yet</div>';
             return;
         }
         
@@ -817,23 +883,24 @@ class FlowState {
             taskElement.innerHTML = `
                 <div class="task-content">
                     <input type="checkbox" ${task.completed ? 'checked' : ''} 
-                           onchange="flowState.toggleTask(${task.id})">
+                           onchange="flowStateApp.toggleTask(${task.id})">
                     <span class="task-text ${task.completed ? 'completed' : ''}">${task.text}</span>
-                    <span class="task-category">${task.category}</span>
+                    <span class="task-category ${task.category}">${this.getCategoryIcon(task.category)} ${task.category}</span>
+                    <span class="task-priority ${task.priority}">${this.getPriorityIcon(task.priority)}</span>
                 </div>
-                <button class="task-delete" onclick="flowState.deleteTask(${task.id})">🗑️</button>
+                <button class="task-delete-button" onclick="flowStateApp.deleteTask(${task.id})">🗑️</button>
             `;
             container.appendChild(taskElement);
         });
     }
 
     toggleTask(taskId) {
-        const task = this.tasks.find(t => t.id === taskId);
+        const task = this.userData.tasks.find(t => t.id === taskId);
         if (task) {
             task.completed = !task.completed;
             task.completedAt = task.completed ? new Date().toISOString() : null;
             
-            this.saveData();
+            this.saveUserData();
             this.renderTasks();
             this.renderDashboard();
             
@@ -845,65 +912,184 @@ class FlowState {
     }
 
     deleteTask(taskId) {
-        this.tasks = this.tasks.filter(t => t.id !== taskId);
-        this.saveData();
+        if (!confirm('Are you sure you want to delete this task?')) return;
+        
+        this.userData.tasks = this.userData.tasks.filter(t => t.id !== taskId);
+        this.saveUserData();
         this.renderTasks();
         this.renderDashboard();
         this.showToast('Task deleted', 'success');
     }
 
-    // Dashboard Updates
-    renderDashboard() {
-        // Update today's stats
-        const today = new Date().toDateString();
-        const todayTasks = this.tasks.filter(task => 
-            task.completed && new Date(task.completedAt).toDateString() === today
-        ).length;
-        
-        document.getElementById('todayPomodoros').textContent = this.timerState.pomodoroCount;
-        document.getElementById('todayTasks').textContent = todayTasks;
-        document.getElementById('currentStreak').textContent = this.calculateStreak();
-        
-        // Update tasks preview
-        this.updateTasksPreview();
-    }
-
     updateTasksPreview() {
-        const preview = document.getElementById('tasksPreview');
+        const preview = document.getElementById('todayTasksPreview');
         if (!preview) return;
         
-        const todayTasks = this.tasks.filter(task => !task.completed && task.dueDate === 'today').slice(0, 3);
+        const todayTasks = this.userData.tasks.filter(task => !task.completed && task.dueDate === 'today').slice(0, 3);
         
         if (todayTasks.length === 0) {
-            preview.innerHTML = '<div class="empty-state">No tasks yet. Add some to get started!</div>';
+            preview.innerHTML = '<div class="empty-state-message">No tasks for today. Add some to get started!</div>';
             return;
         }
         
         preview.innerHTML = todayTasks.map(task => `
             <div class="task-preview-item">
                 <span class="task-preview-text">${task.text}</span>
-                <span class="task-preview-category">${task.category}</span>
+                <span class="task-preview-category ${task.category}">${this.getCategoryIcon(task.category)}</span>
             </div>
         `).join('');
     }
 
-    calculateStreak() {
-        // Calculate productivity streak (days with completed tasks or pomodoros)
+    getCategoryIcon(category) {
+        const icons = {
+            work: '💼',
+            personal: '🏠',
+            health: '💪',
+            learning: '📚',
+            creative: '🎨'
+        };
+        return icons[category] || '📝';
+    }
+
+    getPriorityIcon(priority) {
+        const icons = {
+            low: '🟢',
+            medium: '🟡',
+            high: '🔴'
+        };
+        return icons[priority] || '🟡';
+    } 
+   // Habit Management
+    showHabitModal() {
+        const modal = document.getElementById('habitModalOverlay');
+        if (modal) {
+            modal.style.display = 'flex';
+            document.getElementById('newHabitNameInput').focus();
+        }
+    }
+
+    hideHabitModal() {
+        const modal = document.getElementById('habitModalOverlay');
+        if (modal) {
+            modal.style.display = 'none';
+            document.getElementById('newHabitNameInput').value = '';
+        }
+    }
+
+    saveNewHabit() {
+        const habitInput = document.getElementById('newHabitNameInput');
+        
+        if (!habitInput || !habitInput.value.trim()) {
+            this.showToast('Please enter a habit name', 'error');
+            return;
+        }
+        
+        const newHabit = {
+            id: Date.now(),
+            name: habitInput.value.trim(),
+            createdAt: new Date().toISOString(),
+            completions: {}, // date -> boolean
+            streak: 0
+        };
+        
+        this.userData.habits.push(newHabit);
+        this.saveUserData();
+        this.hideHabitModal();
+        this.renderHabits();
+        
+        this.showToast(`Habit "${newHabit.name}" added! 🎯`, 'success');
+    }
+
+    renderHabits() {
+        const container = document.getElementById('habitsGridContainer');
+        if (!container) return;
+        
+        if (this.userData.habits.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state-message">
+                    <h3>No habits yet!</h3>
+                    <p>Start building positive habits today</p>
+                    <button class="primary-button" onclick="flowStateApp.showHabitModal()">Add Your First Habit</button>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = '<div class="habits-grid"></div>';
+        const habitsGrid = container.querySelector('.habits-grid');
+        
+        this.userData.habits.forEach(habit => {
+            const habitCard = document.createElement('div');
+            habitCard.className = 'habit-card';
+            
+            const streak = this.calculateHabitStreak(habit);
+            const todayKey = this.getDateKey(new Date());
+            const isCompletedToday = habit.completions[todayKey] || false;
+            
+            habitCard.innerHTML = `
+                <div class="habit-header">
+                    <div class="habit-name">${habit.name}</div>
+                    <div class="habit-streak">🔥 ${streak}</div>
+                </div>
+                <div class="habit-progress">
+                    <div class="habit-progress-bar">
+                        <div class="habit-progress-fill" style="width: ${this.getWeeklyProgress(habit)}%"></div>
+                    </div>
+                </div>
+                <div class="habit-days">
+                    ${this.renderHabitDays(habit)}
+                </div>
+                <div class="habit-actions">
+                    <button class="primary-button ${isCompletedToday ? 'completed' : ''}" 
+                            onclick="flowStateApp.toggleHabitToday(${habit.id})">
+                        ${isCompletedToday ? '✅ Done Today' : '⭕ Mark Complete'}
+                    </button>
+                    <button class="secondary-button delete-habit" onclick="flowStateApp.deleteHabit(${habit.id})">
+                        🗑️
+                    </button>
+                </div>
+            `;
+            
+            habitsGrid.appendChild(habitCard);
+        });
+        
+        // Update habits preview
+        this.updateHabitsPreview();
+    }
+
+    renderHabitDays(habit) {
+        const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+        const today = new Date();
+        let html = '';
+        
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateKey = this.getDateKey(date);
+            const isCompleted = habit.completions[dateKey] || false;
+            const isToday = i === 0;
+            
+            html += `
+                <div class="habit-day ${isCompleted ? 'completed' : ''} ${isToday ? 'today' : ''}"
+                     onclick="flowStateApp.toggleHabitDay(${habit.id}, '${dateKey}')">
+                    ${days[date.getDay()]}
+                </div>
+            `;
+        }
+        
+        return html;
+    }
+
+    calculateHabitStreak(habit) {
         let streak = 0;
         const today = new Date();
         
         for (let i = 0; i < 365; i++) {
             const date = new Date(today);
             date.setDate(date.getDate() - i);
-            const dateString = date.toDateString();
+            const dateKey = this.getDateKey(date);
             
-            const hasCompletedTasks = this.tasks.some(task => 
-                task.completed && new Date(task.completedAt).toDateString() === dateString
-            );
-            
-            const hasMoodEntry = this.moodData[this.getDateKey(date)];
-            
-            if (hasCompletedTasks || hasMoodEntry) {
+            if (habit.completions[dateKey]) {
                 streak++;
             } else {
                 break;
@@ -913,7 +1099,374 @@ class FlowState {
         return streak;
     }
 
-    // Utility Functions
+    getWeeklyProgress(habit) {
+        const today = new Date();
+        let completed = 0;
+        
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateKey = this.getDateKey(date);
+            
+            if (habit.completions[dateKey]) {
+                completed++;
+            }
+        }
+        
+        return (completed / 7) * 100;
+    }
+
+    toggleHabitToday(habitId) {
+        const todayKey = this.getDateKey(new Date());
+        this.toggleHabitDay(habitId, todayKey);
+    }
+
+    toggleHabitDay(habitId, dateKey) {
+        const habit = this.userData.habits.find(h => h.id === habitId);
+        if (!habit) return;
+        
+        habit.completions[dateKey] = !habit.completions[dateKey];
+        
+        if (habit.completions[dateKey]) {
+            this.showToast(`Great job! Habit completed! 🎉`, 'success');
+            this.createConfetti();
+        }
+        
+        this.saveUserData();
+        this.renderHabits();
+        this.renderDashboard();
+    }
+
+    deleteHabit(habitId) {
+        if (!confirm('Are you sure you want to delete this habit?')) return;
+        
+        this.userData.habits = this.userData.habits.filter(h => h.id !== habitId);
+        this.saveUserData();
+        this.renderHabits();
+        this.showToast('Habit deleted', 'success');
+    }
+
+    updateHabitsPreview() {
+        const preview = document.getElementById('todayHabitsPreview');
+        if (!preview) return;
+        
+        if (this.userData.habits.length === 0) {
+            preview.innerHTML = '<div class="empty-state-message">No habits tracked yet. Start building good habits!</div>';
+            return;
+        }
+        
+        const todayKey = this.getDateKey(new Date());
+        const habitsPreview = this.userData.habits.slice(0, 3).map(habit => {
+            const isCompleted = habit.completions[todayKey] || false;
+            return `
+                <div class="habit-preview-item ${isCompleted ? 'completed' : ''}">
+                    <span class="habit-preview-name">${habit.name}</span>
+                    <span class="habit-preview-status">${isCompleted ? '✅' : '⭕'}</span>
+                </div>
+            `;
+        }).join('');
+        
+        preview.innerHTML = habitsPreview;
+    }
+
+    // Dashboard Updates
+    renderDashboard() {
+        // Update today's stats
+        const today = new Date().toDateString();
+        const todayTasks = this.userData.tasks.filter(task => 
+            task.completed && task.completedAt && new Date(task.completedAt).toDateString() === today
+        ).length;
+        
+        const pomodoroElement = document.getElementById('todayPomodoroCount');
+        const tasksElement = document.getElementById('todayTasksCompleted');
+        const streakElement = document.getElementById('currentProductivityStreak');
+        
+        if (pomodoroElement) pomodoroElement.textContent = this.timerState.pomodoroCount;
+        if (tasksElement) tasksElement.textContent = todayTasks;
+        if (streakElement) streakElement.textContent = this.calculateProductivityStreak();
+        
+        // Update previews
+        this.updateTasksPreview();
+        this.updateHabitsPreview();
+        this.updateMoodStreak();
+        this.updatePomodoroCounter();
+    }
+
+    calculateProductivityStreak() {
+        // Calculate productivity streak (days with completed tasks or pomodoros or mood entries)
+        let streak = 0;
+        const today = new Date();
+        
+        for (let i = 0; i < 365; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateString = date.toDateString();
+            const dateKey = this.getDateKey(date);
+            
+            const hasCompletedTasks = this.userData.tasks.some(task => 
+                task.completed && task.completedAt && 
+                new Date(task.completedAt).toDateString() === dateString
+            );
+            
+            const hasMoodEntry = this.userData.moodEntries[dateKey];
+            const hasHabitCompletion = this.userData.habits.some(habit => habit.completions[dateKey]);
+            
+            if (hasCompletedTasks || hasMoodEntry || hasHabitCompletion) {
+                streak++;
+            } else {
+                break;
+            }
+        }
+        
+        return streak;
+    }
+
+    // Analytics
+    renderAnalytics() {
+        this.renderProductivityChart();
+        this.renderTimeBreakdown();
+        this.renderAchievements();
+        this.renderMoodTrends();
+        this.renderHabitProgress();
+        this.renderFocusSessionsStats();
+    }
+
+    renderProductivityChart() {
+        const container = document.getElementById('productivityChartContainer');
+        if (!container) return;
+        
+        // Simple bar chart representation
+        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const today = new Date();
+        let chartHTML = '<div class="productivity-chart">';
+        
+        days.forEach((day, index) => {
+            const date = new Date(today);
+            date.setDate(date.getDate() - (6 - index));
+            const dateKey = this.getDateKey(date);
+            
+            // Calculate productivity score for the day
+            const completedTasks = this.userData.tasks.filter(task => 
+                task.completed && task.completedAt && 
+                this.getDateKey(new Date(task.completedAt)) === dateKey
+            ).length;
+            
+            const moodEntry = this.userData.moodEntries[dateKey];
+            const moodScore = moodEntry ? this.getMoodScore(moodEntry.mood) : 0;
+            
+            const habitCompletions = this.userData.habits.filter(habit => habit.completions[dateKey]).length;
+            
+            const totalScore = (completedTasks * 20) + moodScore + (habitCompletions * 10);
+            const height = Math.min((totalScore / 100) * 120, 120);
+            
+            chartHTML += `
+                <div class="chart-bar">
+                    <div class="bar-fill" style="height: ${height}px;" title="${day}: ${totalScore} points"></div>
+                    <div class="bar-label">${day}</div>
+                </div>
+            `;
+        });
+        
+        chartHTML += '</div>';
+        container.innerHTML = chartHTML;
+    }
+
+    getMoodScore(mood) {
+        const scores = {
+            happy: 40,
+            calm: 35,
+            energized: 40,
+            neutral: 20,
+            tired: 10,
+            sad: 5,
+            stressed: 0
+        };
+        return scores[mood] || 0;
+    }
+
+    renderTimeBreakdown() {
+        const container = document.getElementById('timeBreakdownList');
+        if (!container) return;
+        
+        const categories = {
+            work: { icon: '💼', time: 0, color: '#B4A5F5' },
+            personal: { icon: '🏠', time: 0, color: '#FFB5E8' },
+            health: { icon: '💪', time: 0, color: '#A8E6CF' },
+            learning: { icon: '📚', time: 0, color: '#FFD93D' },
+            creative: { icon: '🎨', time: 0, color: '#FF6B6B' }
+        };
+        
+        // Calculate time spent (simplified - based on completed tasks)
+        const today = new Date().toDateString();
+        this.userData.tasks.forEach(task => {
+            if (task.completed && task.completedAt && new Date(task.completedAt).toDateString() === today) {
+                categories[task.category].time += 25; // Assume 25 minutes per task
+            }
+        });
+        
+        // Add pomodoro time
+        categories.work.time += this.timerState.pomodoroCount * 25;
+        
+        let html = '';
+        Object.entries(categories).forEach(([category, data]) => {
+            const hours = Math.floor(data.time / 60);
+            const minutes = data.time % 60;
+            const timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+            
+            html += `
+                <div class="time-breakdown-item">
+                    <div class="time-category">
+                        <span class="time-icon">${data.icon}</span>
+                        <span class="time-name">${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                    </div>
+                    <div class="time-duration">${timeString}</div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html || '<div class="empty-state-message">No time tracked today</div>';
+    }
+
+    renderAchievements() {
+        const container = document.getElementById('achievementsGrid');
+        if (!container) return;
+        
+        const achievements = [
+            {
+                id: 'first_mood',
+                name: 'First Mood',
+                icon: '🎭',
+                description: 'Log your first mood',
+                condition: () => Object.keys(this.userData.moodEntries).length >= 1
+            },
+            {
+                id: 'mood_streak_7',
+                name: '7 Day Streak',
+                icon: '🔥',
+                description: '7 consecutive days of mood logging',
+                condition: () => this.calculateMoodStreak() >= 7
+            },
+            {
+                id: 'first_pomodoro',
+                name: 'First Focus',
+                icon: '🍅',
+                description: 'Complete your first pomodoro',
+                condition: () => this.timerState.pomodoroCount >= 1
+            },
+            {
+                id: 'pomodoro_master',
+                name: 'Focus Master',
+                icon: '🎯',
+                description: 'Complete 25 pomodoros',
+                condition: () => this.timerState.pomodoroCount >= 25
+            },
+            {
+                id: 'task_completer',
+                name: 'Task Master',
+                icon: '✅',
+                description: 'Complete 10 tasks',
+                condition: () => this.userData.tasks.filter(t => t.completed).length >= 10
+            },
+            {
+                id: 'habit_builder',
+                name: 'Habit Builder',
+                icon: '🏗️',
+                description: 'Create 3 habits',
+                condition: () => this.userData.habits.length >= 3
+            }
+        ];
+        
+        let html = '';
+        achievements.forEach(achievement => {
+            const isUnlocked = achievement.condition();
+            html += `
+                <div class="achievement-item ${isUnlocked ? 'unlocked' : 'locked'}">
+                    <div class="achievement-icon">${achievement.icon}</div>
+                    <div class="achievement-name">${achievement.name}</div>
+                    <div class="achievement-description">${achievement.description}</div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+
+    calculateMoodStreak() {
+        let streak = 0;
+        const today = new Date();
+        
+        for (let i = 0; i < 365; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateKey = this.getDateKey(date);
+            
+            if (this.userData.moodEntries[dateKey]) {
+                streak++;
+            } else {
+                break;
+            }
+        }
+        
+        return streak;
+    }
+
+    renderMoodTrends() {
+        const container = document.getElementById('moodTrendsChart');
+        if (!container) return;
+        
+        container.innerHTML = '<div class="mood-trends-placeholder">Mood trends visualization coming soon!</div>';
+    }
+
+    renderHabitProgress() {
+        const container = document.getElementById('habitProgressOverview');
+        if (!container) return;
+        
+        if (this.userData.habits.length === 0) {
+            container.innerHTML = '<div class="empty-state-message">No habits to track yet</div>';
+            return;
+        }
+        
+        let html = '';
+        this.userData.habits.forEach(habit => {
+            const streak = this.calculateHabitStreak(habit);
+            const progress = this.getWeeklyProgress(habit);
+            
+            html += `
+                <div class="habit-progress-item">
+                    <div class="habit-progress-name">${habit.name}</div>
+                    <div class="habit-progress-stats">
+                        <span class="habit-streak">🔥 ${streak}</span>
+                        <span class="habit-weekly">${Math.round(progress)}% this week</span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+    }
+
+    renderFocusSessionsStats() {
+        const container = document.getElementById('focusSessionsStats');
+        if (!container) return;
+        
+        const totalMinutes = this.timerState.pomodoroCount * 25;
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        
+        container.innerHTML = `
+            <div class="focus-stats-grid">
+                <div class="focus-stat-item">
+                    <div class="focus-stat-number">${this.timerState.pomodoroCount}</div>
+                    <div class="focus-stat-label">Sessions Today</div>
+                </div>
+                <div class="focus-stat-item">
+                    <div class="focus-stat-number">${hours}h ${minutes}m</div>
+                    <div class="focus-stat-label">Total Focus Time</div>
+                </div>
+            </div>
+        `;
+    }    // Ut
+ility Functions
     getDateKey(date) {
         return date.toISOString().split('T')[0];
     }
@@ -948,9 +1501,11 @@ class FlowState {
     }
 
     showToast(message, type = 'success') {
-        const toast = document.getElementById('toast');
-        const toastMessage = toast.querySelector('.toast-message');
-        const toastIcon = toast.querySelector('.toast-icon');
+        const toast = document.getElementById('toastNotification');
+        const toastMessage = document.getElementById('toastMessage');
+        const toastIcon = document.getElementById('toastIcon');
+        
+        if (!toast || !toastMessage || !toastIcon) return;
         
         // Set message and icon based on type
         toastMessage.textContent = message;
@@ -967,6 +1522,8 @@ class FlowState {
 
     createConfetti() {
         const container = document.getElementById('confettiContainer');
+        if (!container) return;
+        
         const colors = ['#B4A5F5', '#FFB5E8', '#A8E6CF', '#FFD93D', '#FF6B6B'];
         
         for (let i = 0; i < 50; i++) {
@@ -989,6 +1546,13 @@ class FlowState {
     }
 }
 
+// Global Functions for HTML onclick handlers
+function navigateToSection(sectionName) {
+    if (window.flowStateApp) {
+        window.flowStateApp.navigateToSection(sectionName);
+    }
+}
+
 // Initialize FlowState when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     // Request notification permission
@@ -996,404 +1560,11 @@ document.addEventListener('DOMContentLoaded', () => {
         Notification.requestPermission();
     }
     
-    // Load saved theme
-    const savedTheme = localStorage.getItem('flowstate_theme') || 'light';
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    document.getElementById('themeToggle').textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    // Initialize FlowState Application
+    window.flowStateApp = new FlowStateApp();
     
-    // Initialize FlowState
-    window.flowState = new FlowState();
+    console.log('FlowState Application Ready! 🌸');
 });
-
-// Global function for section navigation (used by HTML onclick)
-function showSection(sectionName) {
-    if (window.flowState) {
-        window.flowState.showSection(sectionName);
-    }
-}
-
-// Extend FlowState class with additional methods
-FlowState.prototype.addHabit = function() {
-        const habitName = prompt('Enter habit name:');
-        if (!habitName) return;
-        
-        const habit = {
-            id: Date.now(),
-            name: habitName,
-            createdAt: new Date().toISOString(),
-            completions: {}, // date -> boolean
-            streak: 0
-        };
-        
-        this.habits.push(habit);
-        this.saveData();
-        this.renderHabits();
-        this.showToast(`Habit "${habitName}" added! 🎯`, 'success');
-    };
-
-FlowState.prototype.renderHabits = function() {
-        const container = document.getElementById('habitsGrid');
-        if (!container) return;
-        
-        container.innerHTML = '';
-        
-        if (this.habits.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state" style="grid-column: 1 / -1;">
-                    <h3>No habits yet!</h3>
-                    <p>Start building positive habits today</p>
-                    <button class="btn-primary" onclick="flowState.addHabit()">Add Your First Habit</button>
-                </div>
-            `;
-            return;
-        }
-        
-        this.habits.forEach(habit => {
-            const habitCard = document.createElement('div');
-            habitCard.className = 'card habit-card';
-            
-            const streak = this.calculateHabitStreak(habit);
-            const todayKey = this.getDateKey(new Date());
-            const isCompletedToday = habit.completions[todayKey] || false;
-            
-            habitCard.innerHTML = `
-                <div class="habit-header">
-                    <div class="habit-name">${habit.name}</div>
-                    <div class="habit-streak">🔥 ${streak}</div>
-                </div>
-                <div class="habit-progress">
-                    <div class="habit-progress-bar">
-                        <div class="habit-progress-fill" style="width: ${this.getWeeklyProgress(habit)}%"></div>
-                    </div>
-                </div>
-                <div class="habit-days">
-                    ${this.renderHabitDays(habit)}
-                </div>
-                <div class="habit-actions" style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-                    <button class="btn-${isCompletedToday ? 'secondary' : 'primary'}" 
-                            onclick="flowState.toggleHabitToday(${habit.id})">
-                        ${isCompletedToday ? '✅ Done Today' : '⭕ Mark Complete'}
-                    </button>
-                    <button class="btn-secondary" onclick="flowState.deleteHabit(${habit.id})" 
-                            style="background: #ff4757; color: white;">🗑️</button>
-                </div>
-            `;
-            
-            container.appendChild(habitCard);
-        });
-    };
-
-FlowState.prototype.renderHabitDays = function(habit) {
-        const days = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-        const today = new Date();
-        let html = '';
-        
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dateKey = this.getDateKey(date);
-            const isCompleted = habit.completions[dateKey] || false;
-            const isToday = i === 0;
-            
-            html += `
-                <div class="habit-day ${isCompleted ? 'completed' : ''} ${isToday ? 'today' : ''}"
-                     onclick="flowState.toggleHabitDay(${habit.id}, '${dateKey}')">
-                    ${days[date.getDay()]}
-                </div>
-            `;
-        }
-        
-        return html;
-    };
-
-FlowState.prototype.calculateHabitStreak = function(habit) {
-        let streak = 0;
-        const today = new Date();
-        
-        for (let i = 0; i < 365; i++) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dateKey = this.getDateKey(date);
-            
-            if (habit.completions[dateKey]) {
-                streak++;
-            } else {
-                break;
-            }
-        }
-        
-        return streak;
-    };
-
-FlowState.prototype.getWeeklyProgress = function(habit) {
-        const today = new Date();
-        let completed = 0;
-        
-        for (let i = 0; i < 7; i++) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dateKey = this.getDateKey(date);
-            
-            if (habit.completions[dateKey]) {
-                completed++;
-            }
-        }
-        
-        return (completed / 7) * 100;
-    };
-
-FlowState.prototype.toggleHabitToday = function(habitId) {
-        const todayKey = this.getDateKey(new Date());
-        this.toggleHabitDay(habitId, todayKey);
-    };
-
-FlowState.prototype.toggleHabitDay = function(habitId, dateKey) {
-        const habit = this.habits.find(h => h.id === habitId);
-        if (!habit) return;
-        
-        habit.completions[dateKey] = !habit.completions[dateKey];
-        
-        if (habit.completions[dateKey]) {
-            this.showToast(`Great job! Habit completed! 🎉`, 'success');
-            this.createConfetti();
-        }
-        
-        this.saveData();
-        this.renderHabits();
-        this.renderDashboard();
-    };
-
-FlowState.prototype.deleteHabit = function(habitId) {
-        if (!confirm('Are you sure you want to delete this habit?')) return;
-        
-        this.habits = this.habits.filter(h => h.id !== habitId);
-        this.saveData();
-        this.renderHabits();
-        this.showToast('Habit deleted', 'success');
-    };
-
-    // Analytics and Insights
-FlowState.prototype.renderAnalytics = function() {
-        this.renderProductivityChart();
-        this.renderTimeBreakdown();
-        this.renderAchievements();
-    };
-
-FlowState.prototype.renderProductivityChart = function() {
-        const container = document.getElementById('productivityChart');
-        if (!container) return;
-        
-        // Simple bar chart representation
-        const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-        const today = new Date();
-        let chartHTML = '<div style="display: flex; align-items: end; gap: 0.5rem; height: 150px; padding: 1rem;">';
-        
-        days.forEach((day, index) => {
-            const date = new Date(today);
-            date.setDate(date.getDate() - (6 - index));
-            const dateKey = this.getDateKey(date);
-            
-            // Calculate productivity score for the day
-            const completedTasks = this.tasks.filter(task => 
-                task.completed && task.completedAt && 
-                this.getDateKey(new Date(task.completedAt)) === dateKey
-            ).length;
-            
-            const moodEntry = this.moodData[dateKey];
-            const moodScore = moodEntry ? this.getMoodScore(moodEntry.mood) : 0;
-            
-            const totalScore = (completedTasks * 20) + moodScore;
-            const height = Math.min((totalScore / 100) * 120, 120);
-            
-            chartHTML += `
-                <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
-                    <div style="width: 100%; height: ${height}px; background: var(--gradient-1); 
-                                border-radius: 4px; margin-bottom: 0.5rem; 
-                                transform: translateZ(2px); transition: all 0.3s ease;"
-                         onmouseover="this.style.transform='translateZ(8px) scale(1.05)'"
-                         onmouseout="this.style.transform='translateZ(2px) scale(1)'"></div>
-                    <span style="font-size: 0.8rem; color: var(--text-secondary);">${day}</span>
-                </div>
-            `;
-        });
-        
-        chartHTML += '</div>';
-        container.innerHTML = chartHTML;
-    };
-
-FlowState.prototype.getMoodScore = function(mood) {
-        const scores = {
-            happy: 40,
-            calm: 35,
-            energized: 40,
-            neutral: 20,
-            tired: 10,
-            sad: 5,
-            stressed: 0
-        };
-        return scores[mood] || 0;
-    };
-
-FlowState.prototype.renderTimeBreakdown = function() {
-        const container = document.getElementById('timeBreakdown');
-        if (!container) return;
-        
-        const categories = {
-            work: { icon: '💼', time: 0, color: '#B4A5F5' },
-            personal: { icon: '🏠', time: 0, color: '#FFB5E8' },
-            health: { icon: '💪', time: 0, color: '#A8E6CF' },
-            learning: { icon: '📚', time: 0, color: '#FFD93D' }
-        };
-        
-        // Calculate time spent (simplified - based on completed tasks)
-        const today = new Date().toDateString();
-        this.tasks.forEach(task => {
-            if (task.completed && new Date(task.completedAt).toDateString() === today) {
-                categories[task.category].time += 25; // Assume 25 minutes per task
-            }
-        });
-        
-        // Add pomodoro time
-        categories.work.time += this.timerState.pomodoroCount * 25;
-        
-        let html = '';
-        Object.entries(categories).forEach(([category, data]) => {
-            const hours = Math.floor(data.time / 60);
-            const minutes = data.time % 60;
-            const timeString = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-            
-            html += `
-                <div class="time-item">
-                    <div class="time-category">
-                        <span class="time-icon">${data.icon}</span>
-                        <span>${category.charAt(0).toUpperCase() + category.slice(1)}</span>
-                    </div>
-                    <div class="time-duration">${timeString}</div>
-                </div>
-            `;
-        });
-        
-        container.innerHTML = html || '<div class="empty-state">No time tracked today</div>';
-    };
-
-FlowState.prototype.renderAchievements = function() {
-        const container = document.getElementById('achievementsGrid');
-        if (!container) return;
-        
-        const achievements = [
-            {
-                id: 'first_mood',
-                name: 'First Mood',
-                icon: '🎭',
-                condition: () => Object.keys(this.moodData).length >= 1
-            },
-            {
-                id: 'mood_streak_7',
-                name: '7 Day Streak',
-                icon: '🔥',
-                condition: () => this.calculateMoodStreak() >= 7
-            },
-            {
-                id: 'first_pomodoro',
-                name: 'First Focus',
-                icon: '🍅',
-                condition: () => this.timerState.pomodoroCount >= 1
-            },
-            {
-                id: 'pomodoro_master',
-                name: 'Focus Master',
-                icon: '🎯',
-                condition: () => this.timerState.pomodoroCount >= 25
-            },
-            {
-                id: 'task_completer',
-                name: 'Task Master',
-                icon: '✅',
-                condition: () => this.tasks.filter(t => t.completed).length >= 10
-            },
-            {
-                id: 'habit_builder',
-                name: 'Habit Builder',
-                icon: '🏗️',
-                condition: () => this.habits.length >= 3
-            }
-        ];
-        
-        let html = '';
-        achievements.forEach(achievement => {
-            const isUnlocked = achievement.condition();
-            html += `
-                <div class="achievement-item ${isUnlocked ? 'unlocked' : ''}">
-                    <span class="achievement-icon">${achievement.icon}</span>
-                    <span class="achievement-name">${achievement.name}</span>
-                </div>
-            `;
-        });
-        
-        container.innerHTML = html;
-    };
-
-FlowState.prototype.calculateMoodStreak = function() {
-        let streak = 0;
-        const today = new Date();
-        
-        for (let i = 0; i < 365; i++) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const dateKey = this.getDateKey(date);
-            
-            if (this.moodData[dateKey]) {
-                streak++;
-            } else {
-                break;
-            }
-        }
-        
-        return streak;
-    };
-
-    // Enhanced initialization - Override the original init method
-FlowState.prototype.initEnhanced = function() {
-        this.loadData();
-        this.setupEventListeners();
-        this.updateDateTime();
-        this.setupMouseTracking();
-        this.setupKeyboardShortcuts();
-        this.renderDashboard();
-        this.renderMoodCalendar();
-        this.updateMoodAnalytics();
-        this.setupTimerGradient();
-        this.renderHabits();
-        this.renderAnalytics();
-        
-        // Setup habit tracking button
-        const addHabitBtn = document.getElementById('addHabitBtn');
-        if (addHabitBtn) {
-            addHabitBtn.addEventListener('click', () => this.addHabit());
-        }
-        
-        // Start real-time updates
-        setInterval(() => this.updateDateTime(), 1000);
-        
-        // Show entrance animation
-        this.showEntranceAnimation();
-        
-        // Update analytics when switching to analytics section
-        const originalShowSection = this.showSection.bind(this);
-        const self = this;
-        this.showSection = function(sectionName) {
-            originalShowSection(sectionName);
-            if (sectionName === 'analytics') {
-                setTimeout(() => self.renderAnalytics(), 200);
-            }
-            if (sectionName === 'habits') {
-                setTimeout(() => self.renderHabits(), 200);
-            }
-        };
-    };
-
-// Call the enhanced initialization
-FlowState.prototype.init = FlowState.prototype.initEnhanced;
 
 // Additional utility functions for better UX
 function createRippleEffect(element, event) {
@@ -1406,7 +1577,7 @@ function createRippleEffect(element, event) {
     ripple.style.width = ripple.style.height = size + 'px';
     ripple.style.left = x + 'px';
     ripple.style.top = y + 'px';
-    ripple.classList.add('ripple');
+    ripple.classList.add('ripple-effect');
     
     element.appendChild(ripple);
     
@@ -1418,7 +1589,7 @@ function createRippleEffect(element, event) {
 // Add ripple effect to all buttons
 document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', (e) => {
-        if (e.target.matches('button, .btn-primary, .btn-secondary')) {
+        if (e.target.matches('button, .primary-button, .secondary-button, .timer-button')) {
             createRippleEffect(e.target, e);
         }
     });
@@ -1428,34 +1599,20 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('keydown', (e) => {
     // ESC to close modals or inputs
     if (e.key === 'Escape') {
-        const taskInput = document.getElementById('taskInputContainer');
+        const taskInput = document.getElementById('taskInputForm');
+        const habitModal = document.getElementById('habitModalOverlay');
+        
         if (taskInput && taskInput.style.display !== 'none') {
-            window.flowState.hideTaskInput();
+            window.flowStateApp.hideTaskInput();
+        }
+        
+        if (habitModal && habitModal.style.display === 'flex') {
+            window.flowStateApp.hideHabitModal();
         }
     }
-    
-    // Arrow keys for navigation
-    if (e.altKey) {
-        switch (e.key) {
-            case 'ArrowLeft':
-                e.preventDefault();
-                // Navigate to previous section
-                break;
-            case 'ArrowRight':
-                e.preventDefault();
-                // Navigate to next section
-                break;
-        }
-    }
-});// 
-Test function to verify FlowState is working
-function testFlowState() {
-    console.log('FlowState class:', FlowState);
-    console.log('FlowState prototype methods:', Object.getOwnPropertyNames(FlowState.prototype));
-    return true;
-}
+});
 
 // Export for testing
 if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { FlowState, testFlowState };
+    module.exports = { FlowStateApp };
 }
